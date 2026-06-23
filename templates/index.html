@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeepFace — Análisis Facial</title>
+  <style>
+    :root {
+      --primary-color: #3b82f6;
+      --primary-hover: #2563eb;
+      --bg-color: #f3f4f6;
+      --card-bg: #ffffff;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+    }
+
+    .main-container {
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      width: 100%;
+      max-width: 800px;
+      padding: 2rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      color: var(--primary-color);
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      letter-spacing: 0.5px;
+    }
+
+    /* Upload Section */
+    .upload-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      padding: 2rem;
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      background-color: #f9fafb;
+      transition: border-color 0.3s;
+    }
+
+    .upload-section:hover {
+      border-color: var(--primary-color);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .custom-file-upload {
+      background-color: white;
+      border: 1px solid var(--border-color);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--text-main);
+      transition: all 0.2s;
+    }
+
+    .custom-file-upload:hover {
+      background-color: var(--bg-color);
+    }
+
+    #preview-img {
+      max-width: 100%;
+      max-height: 250px;
+      border-radius: 8px;
+      display: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: var(--primary-hover);
+    }
+
+    button:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    /* Loading Spinner */
+    .loader {
+      display: none;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary-color);
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 1rem auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Results Section */
+    #results {
+      margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .annotated-img {
+      max-width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .faces-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      width: 100%;
+    }
+
+    .face-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .face-card h3 {
+      font-size: 1.1rem;
+      color: var(--primary-color);
+      margin-bottom: 0.8rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.4rem;
+    }
+
+    .face-card p {
+      margin-bottom: 0.4rem;
+      font-size: 0.95rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .face-card span {
+      font-weight: 600;
+    }
+
+    .error-msg {
+      color: #ef4444;
+      background-color: #fef2f2;
+      padding: 1rem;
+      border-radius: 6px;
+      border: 1px solid #fecaca;
+      width: 100%;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-container">
+    <header>
+      <h1>DeepFace AI</h1>
+      <p>Analizador Facial Inteligente: Género · Etnia · Edad · Emoción</p>
+    </header>
+
+    <div class="upload-section">
+      <label for="file-input" class="custom-file-upload">
+        Seleccionar Imagen
+      </label>
+      <input type="file" id="file-input" accept="image/*">
+      <img id="preview-img" alt="Vista previa de la imagen">
+      
+      <button id="analyze-btn" disabled>Analizar Imagen</button>
+      <div id="loader" class="loader"></div>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const resultsDiv = document.getElementById('results');
+    const previewImg = document.getElementById('preview-img');
+    const loader = document.getElementById('loader');
+
+    let selectedFile = null;
+
+    // Manejar selección de archivo y mostrar vista previa
+    fileInput.addEventListener('change', e => {
+      selectedFile = e.target.files[0];
+      
+      if (selectedFile) {
+        analyzeBtn.disabled = false;
+        // Mostrar vista previa
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          previewImg.src = event.target.result;
+          previewImg.style.display = 'block';
+        }
+        reader.readAsDataURL(selectedFile);
+        resultsDiv.innerHTML = ''; // Limpiar resultados anteriores
+      } else {
+        analyzeBtn.disabled = true;
+        previewImg.style.display = 'none';
+      }
+    });
+
+    // Manejar envío al servidor
+    analyzeBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      const fd = new FormData();
+      fd.append('image', selectedFile);
+
+      // Estado de carga
+      analyzeBtn.style.display = 'none';
+      loader.style.display = 'block';
+      resultsDiv.innerHTML = '';
+
+      try {
+        const resp = await fetch('/analyze', { method: 'POST', body: fd });
+        const data = await resp.json();
+        renderResults(data);
+      } catch (err) {
+        resultsDiv.innerHTML = `<div class="error-msg">Error de conexión con el servidor.</div>`;
+      } finally {
+        // Restaurar botones
+        loader.style.display = 'none';
+        analyzeBtn.style.display = 'block';
+      }
+    });
+
+    // Renderizar resultados
+    function renderResults(data) {
+      if (data.error) {
+        resultsDiv.innerHTML = `<div class="error-msg">${data.error}</div>`;
+        return;
+      }
+
+      const { faces, annotated_image } = data;
+      let htmlContent = '';
+
+      // Mostrar imagen procesada si existe
+      if (annotated_image) {
+        htmlContent += `<img src="data:image/jpeg;base64,${annotated_image}" class="annotated-img" alt="Imagen Analizada">`;
+      }
+
+      // Si no se encontraron rostros
+      if (!faces || faces.length === 0) {
+        htmlContent += `<div class="error-msg" style="color:#b45309; background:#fffbeb; border-color:#fde68a;">No se detectaron rostros en la imagen.</div>`;
+        resultsDiv.innerHTML = htmlContent;
+        return;
+      }
+
+      // Crear grid para las tarjetas de los rostros
+      let facesGrid = '<div class="faces-grid">';
+      
+      faces.forEach((face, i) => {
+        // Formatear porcentaje si existe
+        const confianza = face.genero_confianza ? parseFloat(face.genero_confianza).toFixed(1) : 0;
+        
+        facesGrid += `
+          <div class="face-card">
+            <h3>Rostro ${i + 1}</h3>
+            <p>Género: <span>${face.genero ?? 'N/A'} (${confianza}%)</span></p>
+            <p>Etnia: <span>${face.raza_dominante ?? 'N/A'}</span></p>
+            <p>Edad aprox: <span>${face.edad_estimada ?? 'N/A'} años</span></p>
+            <p>Emoción: <span>${face.emocion ?? 'N/A'}</span></p>
+          </div>
+        `;
+      });
+
+      facesGrid += '</div>';
+      htmlContent += facesGrid;
+
+      resultsDiv.innerHTML = htmlContent;
+    }
+  </script>
+</body>
+</html>
